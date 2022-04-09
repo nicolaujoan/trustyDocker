@@ -11,8 +11,7 @@ Before applying host security, a mechanism such as <i>iptables</i>, <i>SElinux</
 
 Something super important is to control the permission of the user. It is recommended to create a docker group and add the users with permissions to run containers there.
 
-foto
-
+![1](./images/1.png)
 
 <hr>
 
@@ -24,7 +23,7 @@ the file <i>/etc/docker/daemon.json</i> should be created to configure it:
 
 we have to put debug: false
 
-foto
+![2](./images/2.png)
 
 It's super interesting the <i>icc</i> because it avoids the connectivity between containers due to all they are in the same network but only the ones that are linked are accessible. For example, wordpress and mysql when are linked in a .yml file using docker-compose. 
 
@@ -42,6 +41,8 @@ we can use ulimit to limit the resources that a container uses.
 docker run --ulimit nofile=512:512 --rm debian sh -c "ulimit -n" 
 
 ```
+
+![3](./images/3.png)
 
 if we quit the ulimit flag, it takes the default ones. The config file can be modified to fix small limits and modify it in runtime.
 
@@ -85,6 +86,8 @@ mount -t tmpfs none /mnt
 df -h
 ```
 
+![4](./images/4.png)
+
 and it says it has been capable to mount it, but if we don't add privileges, it will return:
 
 ```
@@ -115,6 +118,43 @@ We have to pull only official images or verified. If not, we can be in a hurry.
 An image can be done from Github, cloning it or doing the build from the dockerfile.
 
 Docker uses Notary service to manage images nad sign them.
+
+Esta variable de entorno es muy aconsejable tenerla a true. Por ejemplo se puede incluir en el bash.rc.
+
+A partir de una imagen es parecido a compilar a partir de la definición para generar las capas y guardarla en un registry como docker.hub
+
+La imagen de alpine sólo pesa 5.61 MB porque comparte el kernel con el host.
+
+Los comandos se ejecutan en tiempo de compilación en la preparación del entorno y ENTRYPOINT y CMD en tiempo de ejecución.
+
+Lo normal es poner en ENTRYPOINT un comando y en CMD los parámetros (que se pueden sobrescribir)
+
+También existe el comando ADD que es muy parecido a COPY. La diferencia es que COPY sólo permite copiar desde el equipo y ADD desde una url.
+
+Y otra diferencia es que ADD puede copiar y descomprimir archivos, pero la capa no se podrá cachear.
+
+Es una mala praxis no usar la versión al utilizar un paquete. Por ejemplo, alpine
+
+para buscar imágenes se usa docker search alpine, pero no nos muestra tag
+
+De esta forma, se puede comprobar si tiene vulnerabilidades o si dentro de un tiempo la vuelvo a generar puede dar problemas de compatibilidad.
+
+Es bastante normal que el código deba estar compilado lo que añade más superficie a ser atacada porque no interesa tener un compilador en la imagen ya que si nuestro contenedor es atacado el atacante podría compilar programas en nuestro sistema, cosa que está totalmente prohibida.
+
+por ejemplo:
+
+```
+FROM golang:alpine AS builder
+ENV GO111MODULE=auto
+COPY whoami.go /app/
+WORKDIR /app
+RUN go build -o whoami
+
+FROM alpine
+WORKDIR /app
+COPY --from=builder /app/whoami /app/
+ENTRYPOINT ./whoami
+```
 
 pot: concept from kubernetes related to a group of containers that share the same ports space.
 
